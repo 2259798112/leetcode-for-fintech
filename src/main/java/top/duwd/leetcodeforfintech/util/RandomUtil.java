@@ -16,20 +16,17 @@ public class RandomUtil {
 
     public static int r(int min, int max) {
 
-        int count = 0;
         while (true) {
 
-            int bound = Math.abs(min) >= Math.abs(max) ? Math.abs(min) + 1 : Math.abs(max) + 1;
-            count++;
+            int bound = Math.abs(min) > Math.abs(max) ? Math.abs(min) : Math.abs(max) + 1;
             int i = R.nextInt(bound);
+
             if (min < 0) {
                 int np = R.nextBoolean() ? 1 : -1;
                 i = np * i;
             }
 
             if (i <= max && i >= min) {
-                System.out.println("count=" + count);
-
                 return i;
             }
         }
@@ -38,7 +35,7 @@ public class RandomUtil {
 
     public static void main(String[] args) {
         for (int i = 0; i < 100; i++) {
-            int r = r(-25, 10);
+            int r = r(-109,109);
             System.out.println("index=" + i + " " + r);
         }
     }
