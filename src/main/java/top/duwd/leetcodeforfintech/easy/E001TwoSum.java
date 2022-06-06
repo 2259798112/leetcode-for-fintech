@@ -63,13 +63,12 @@ public class E001TwoSum {
     }
 
     /*
-
-57 / 57 test cases passed.
-Status: Accepted
-Runtime: 60 ms
-Memory Usage: 42.5 MB
-Submitted: 0 minutes ago
-
+        57 / 57 test cases passed.
+        Status: Accepted
+        Runtime: 60 ms
+        Memory Usage: 42.5 MB
+        Submitted: 0 minutes ago
+        暴力破解, 循环算法
      */
     public static int[] a1(int[] nums, int target) {
         for (int i = 0; i < nums.length; i++) {
