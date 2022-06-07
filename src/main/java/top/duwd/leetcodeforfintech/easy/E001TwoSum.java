@@ -3,6 +3,8 @@ package top.duwd.leetcodeforfintech.easy;
 import top.duwd.leetcodeforfintech.util.ArrayUtil;
 import top.duwd.leetcodeforfintech.util.RandomUtil;
 
+import java.util.HashMap;
+
 /*
 https://leetcode.com/problems/two-sum/
 Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.
@@ -83,6 +85,23 @@ public class E001TwoSum {
             }
         }
 
+        return new int[0];
+    }
+
+    /*
+    减少运算(循环), 增加空间(临时表)
+    06/07/2022 10:12	Accepted	3 ms	45.4 MB	java
+     */
+    public static int[] a2(int[] nums, int target){
+        HashMap<Integer, Integer> tmp = new HashMap<>();
+        for (int i = 0; i < nums.length; i++) {
+            int t = target - nums[i];
+            if (tmp.containsKey(t)){
+                return new int[]{tmp.get(t),i};
+            }else {
+                tmp.put(nums[i],i);
+            }
+        }
         return new int[0];
     }
 }
