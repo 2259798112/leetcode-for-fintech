@@ -664,6 +664,103 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
      */
     transient Node<K, V>[] table;
 
+    /**
+     * Holds cached entrySet(). Note that AbstractMap fields are used
+     * for keySet() and values().
+     */
+    transient Set<Map.Entry<K,V>> entrySet;
+
+
+    /**
+     * The number of key-value mappings contained in this map.
+     * 记录了key-value entry 的数量
+     */
+    transient int size;
+
+    /**
+     * The number of times this HashMap has been structurally modified
+     * Structural modifications are those that change the number of mappings in
+     * the HashMap or otherwise modify its internal structure (e.g.,
+     * rehash).  This field is used to make iterators on Collection-views of
+     * the HashMap fail-fast.  (See ConcurrentModificationException).
+     * 
+     * 
+     * 结构性修改计数器
+     * 迭代器快速失效 判断依据
+     
+     1.该异常不单单会在多线程情况下发生；
+     2.在单线程情况下也可能发生，就是在有使用有fail-fast机制的迭代器遍历集合时，有修改集合的操作也会抛出此异常；
+     3.HashMap中的modCount是为了结论2而设计的。
+     */
+    transient int modCount;
+
+
+    /**
+     * The next size value at which to resize (capacity * load factor).
+     final int capacity() {
+         return  (table != null) ? 
+                    table.length : (threshold > 0) ? 
+                        threshold :DEFAULT_INITIAL_CAPACITY;
+     }
+     */
+    int threshold;
+    /**
+     * The load factor for the hash table.
+     */
+    final float loadFactor;
+    
+    
+    /**
+     * Constructs an empty <tt>HashMap</tt> with the specified initial
+     * capacity and load factor.
+     * 
+     * 构造函数只是指定了 初始容量 加载因子
+     */
+    public HashMap(int initialCapacity, float loadFactor) {
+        
+        //初始化 capacity 容量边界校验
+        //为什么 负数提示，大于就没有提示？
+        if (initialCapacity < 0)
+            throw new IllegalArgumentException("Illegal initial capacity: " +
+                    initialCapacity);
+        if (initialCapacity > MAXIMUM_CAPACITY)
+            initialCapacity = MAXIMUM_CAPACITY;
+        
+        //加载因子做校验
+        if (loadFactor <= 0 || Float.isNaN(loadFactor))
+            throw new IllegalArgumentException("Illegal load factor: " +
+                    loadFactor);
+        this.loadFactor = loadFactor;
+        
+        //根据给定capacity 计算上沿2^n 
+        this.threshold = tableSizeFor(initialCapacity);
+    }
+    
+    public HashMap(int initialCapacity) {
+        this(initialCapacity, DEFAULT_LOAD_FACTOR);
+    }
+    
+    public HashMap() {
+        this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
+    }
+    
+    public HashMap(Map<? extends K, ? extends V> m) {
+        this.loadFactor = DEFAULT_LOAD_FACTOR;
+        putMapEntries(m, false);
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 }
 
 
