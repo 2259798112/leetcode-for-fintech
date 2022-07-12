@@ -935,6 +935,98 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
         return null;
     }
 
+    /**
+     * 使用 getNode 方法判断 是否存在数据
+     */
+    public boolean containsKey(Object key) {
+        return getNode(hash(key), key) != null;
+    }
+
+
+    /**
+     * Associates the specified value with the specified key in this map.
+     * If the map previously contained a mapping for the key, the old
+     * value is replaced.
+     *
+     * @param key key with which the specified value is to be associated
+     * @param value value to be associated with the specified key
+     * @return the previous value associated with <tt>key</tt>, or
+     *         <tt>null</tt> if there was no mapping for <tt>key</tt>.
+     *         (A <tt>null</tt> return can also indicate that the map
+     *         previously associated <tt>null</tt> with <tt>key</tt>.)
+     */
+    public V put(K key, V value) {
+        return putVal(hash(key), key, value, false, true);
+    }
+
+    /**
+     * Implements Map.put and related methods.
+     *
+     * @param hash hash for key
+     * @param key the key
+     * @param value the value to put
+     * @param onlyIfAbsent if true, don't change existing value
+     * @param evict if false, the table is in creation mode.
+     * @return previous value, or null if none
+     */
+    final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+                   boolean evict) {
+
+        Node<K,V>[] tab;
+        Node<K,V> p;
+        int n, i;
+
+        //先判读是否存在table，空的table 先做resize
+        if ((tab = table) == null || (n = tab.length) == 0)
+            n = (tab = resize()).length;
+
+        //判断hash定位下的 table 是否位null
+        //null 值需要先初始化一个Node
+        //非null 则找到对应位置插入
+        if ((p = tab[i = (n - 1) & hash]) == null)
+            tab[i] = newNode(hash, key, value, null);
+
+        else {
+            Node<K,V> e; K k;
+            if (p.hash == hash &&
+                    ((k = p.key) == key || (key != null && key.equals(k))))
+                e = p;//如果hash定位到的Node 与插入的数据相同
+
+                //判断该Node 是Tree 还是 链表
+            else if (p instanceof TreeNode)
+                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+            else {
+                //对于链表形式，遍历链表
+                for (int binCount = 0; ; ++binCount) {
+                    if ((e = p.next) == null) {
+                        //生产新Node
+                        p.next = newNode(hash, key, value, null);
+                        //判断此时Node 是否需要转化Tree
+                        if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+                            treeifyBin(tab, hash);
+                        break;
+                    }
+                    if (e.hash == hash &&
+                            ((k = e.key) == key || (key != null && key.equals(k))))
+                        break;
+                    p = e;
+                }
+            }
+            if (e != null) { // existing mapping for key
+                V oldValue = e.value;
+                if (!onlyIfAbsent || oldValue == null)
+                    e.value = value;
+                afterNodeAccess(e);
+                return oldValue;
+            }
+        }
+        ++modCount;
+        if (++size > threshold)
+            resize();
+        afterNodeInsertion(evict);
+        return null;
+    }
+
 
 
 
