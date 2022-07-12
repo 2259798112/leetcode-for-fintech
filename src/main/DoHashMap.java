@@ -1,5 +1,5 @@
 
-public class HashMap<K, V> extends AbstractMap<K, V>
+public class DoHashMap<K, V> extends AbstractMap<K, V>
         implements Map<K, V>, Cloneable, Serializable {
 
 
@@ -524,6 +524,32 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
 
      奇怪的知识——位掩码
      https://segmentfault.com/a/1190000039239875
+
+     https://www.cxyxiaowu.com/14188.html
+     你管这玩意叫异或运算？
+
+     https://blog.csdn.net/u011123972/article/details/90265415
+     由String.hashCode方法引发的int类型乘法溢出的思考
+
+     2的幂次方减1后每一位都是1，让数组每一个位置都能添加到元素。
+     例如十进制8，对应二进制1000，减1是0111，这样在&hash值使数组每个位置都是可以添加到元素的，如果有一个位置为0，那么无论hash值是多少那一位总是0，例如0101，&hash后第二位总是0，也就是说数组中下标为2的位置总是空的。
+     如果初始化大小设置的不是2的幂次方，hashmap也会调整到比初始化值大且最近的一个2的幂作为capacity。
+
+     1）通过将 Key 的 hash 值与 length-1 进行 & 运算，实现了当前 Key 的定位，
+            2 的幂次方可以减少冲突（碰撞）的次数，提高 HashMap 查询效率；
+
+     2）如果 length 为 2 的次幂，则 length-1  转化为二进制必定是 11111…… 的形式，在于 h 的二进制与操作效率会非常的快，而且空间不浪费；
+     如果 length 不是 2 的次幂，比如 length 为 15，则 length-1 为 14，对应的二进制为 1110，
+     在于 h 与操作，最后一位都为 0，而 0001，0011，0101，1001，1011，0111，1101 这几个位置永远都不能存放元素了，空间浪费相当大，
+     更糟的是这种情况中，数组可以使用的位置比数组长度小了很多，这意味着进一步增加了碰撞的几率，减慢了查询的效率！这样就会造成空间的浪费。
+
+     怎么理解这个右移16位？为什么右移16位就增加随机性
+     这个hash值，要参与node[] 下标的定位 也就是 (n-1) & hash
+
+     通常来说，我们的n 都不会很大，2^16 = 65536  6w多个key-value
+     这时候，我们讲定位在 0001 0000 0000 0000 0000 之内，也就是n-1 （1111 1111 1111 1111）之内
+     不要在与操作的位上存在0，这样就会掩盖
+
      */
     static final int hash(Object key) {
         int h;
@@ -615,8 +641,29 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
      * Returns a power of two size for the given target capacity.
 
      https://segmentfault.com/a/1190000039392972
-     找到 cap 最近的一个2的n次方
+     之所以在开始移位前先将容量-1，是为了避免给定容量已经是8,16这样2的幂时，不减一直接移位会导致得到的结果比预期大。
+     比如预期16得到应该是16，直接移位的话会得到32。在上图中就是所有x本身已经是0的情况下，不减1得到的结果变大了。
+
+     1000
+     0100
+     ----
+
+     1100
+     0011
+     ----
+
+     1111
+    +0001
+     ----
+
+    10000 double 了
+
+
+
+     找到 > cap 最近的一个2的n次方
      返回大于输入参数且最近的2的整数次幂的数。比如10，则返回16。
+
+
      */
     static final int tableSizeFor(int cap) {
         int n = cap - 1;
@@ -716,7 +763,7 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
      * 
      * 构造函数只是指定了 初始容量 加载因子
      */
-    public HashMap(int initialCapacity, float loadFactor) {
+    public DoHashMap(int initialCapacity, float loadFactor) {
         
         //初始化 capacity 容量边界校验
         //为什么 负数提示，大于就没有提示？
@@ -736,15 +783,15 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
         this.threshold = tableSizeFor(initialCapacity);
     }
     
-    public HashMap(int initialCapacity) {
+    public DoHashMap(int initialCapacity) {
         this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
     
-    public HashMap() {
+    public DoHashMap() {
         this.loadFactor = DEFAULT_LOAD_FACTOR; // all other fields defaulted
     }
     
-    public HashMap(Map<? extends K, ? extends V> m) {
+    public DoHashMap(Map<? extends K, ? extends V> m) {
         this.loadFactor = DEFAULT_LOAD_FACTOR;
         putMapEntries(m, false);
     }
@@ -759,14 +806,28 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
         int s = m.size();
         if (s > 0) {
             if (table == null) { // pre-size
+
+                //参考
+                // The next size value at which to resize
+                // threshold = (capacity * load factor).
+                // threshold / loadFactor = capacity
+                // 计算新的阈值 修正上下边界
                 float ft = ((float)s / loadFactor) + 1.0F;
+
                 int t = ((ft < (float)MAXIMUM_CAPACITY) ?
-                        (int)ft : MAXIMUM_CAPACITY);
+                            (int)ft : MAXIMUM_CAPACITY);
+
+                //当新threshold 超过阈值时，才进行新的阈值申请
                 if (t > threshold)
                     threshold = tableSizeFor(t);
             }
+
+            //非初始化状态， 计算是否需要resize
             else if (s > threshold)
                 resize();
+
+
+            //此时，数组已经构造成功 ，遍历赋值
             for (Map.Entry<? extends K, ? extends V> e : m.entrySet()) {
                 K key = e.getKey();
                 V value = e.getValue();
@@ -775,13 +836,104 @@ https://www.cnblogs.com/iyangyuan/archive/2013/04/09/3011274.html
         }
     }
 
+    /**
+     * @return the number of key-value mappings in this map
+     */
+    public int size() {
+        return size;
+    }
+
+    /**
+     * @return true if this map contains no key-value mappings
+     */
+    public boolean isEmpty() {
+        return size == 0;
+    }
 
 
+    /**
+     * Returns the value to which the specified key is mapped,
+     * or {@code null} if this map contains no mapping for the key.
+     *
+     * <p>More formally, if this map contains a mapping from a key
+     * {@code k} to a value {@code v} such that {@code (key==null ? k==null :
+     * key.equals(k))}, then this method returns {@code v}; otherwise
+     * it returns {@code null}.  (There can be at most one such mapping.)
+     *
+     * <p>A return value of {@code null} does not <i>necessarily</i>
+     * indicate that the map contains no mapping for the key; it's also
+     * possible that the map explicitly maps the key to {@code null}.
+     * The {@link #containsKey containsKey} operation may be used to
+     * distinguish these two cases.
+     *
+     * @see #put(Object, Object)
+     */
+    public V get(Object key) {
+        Node<K,V> e;
+        return (e = getNode(hash(key), key)) == null ? null : e.value;
+    }
+
+    /**
+     * Implements Map.get and related methods.
+     *
+     * @param hash hash for key
+     * @param key the key
+     * @return the node, or null if none
+     */
+    final Node<K,V> getNode(int hash, Object key) {
+        Node<K,V>[] tab;
+        Node<K,V> first, e;
+        int n;
+        K k;
 
 
+//        如果table !=null 而且table.length >0 也就是说 桶数组有值
+//        同时 (n-1) & hash
+//        2的幂次方减1后每一位都是1，让数组每一个位置都能添加到元素。
+//        例如十进制8，对应二进制1000，减1是0111，这样在&hash值使数组每个位置都是可以添加到元素的，如果有一个位置为0，那么无论hash值是多少那一位总是0，例如0101，&hash后第二位总是0，也就是说数组中下标为2的位置总是空的。
+//        如果初始化大小设置的不是2的幂次方，hashmap也会调整到比初始化值大且最近的一个2的幂作为capacity。
+//
+//        1）通过将 Key 的 hash 值与 length-1 进行 & 运算，实现了当前 Key 的定位，2 的幂次方可以减少冲突（碰撞）的次数，提高 HashMap 查询效率；
+//        2）如果 length 为 2 的次幂，则 length-1  转化为二进制必定是 11111…… 的形式，在于 h 的二进制与操作效率会非常的快，而且空间不浪费；
+//        如果 length 不是 2 的次幂，比如 length 为 15，则 length-1 为 14，对应的二进制为 1110，
+//        在于 h 与操作，最后一位都为 0，而 0001，0011，0101，1001，1011，0111，1101 这几个位置永远都不能存放元素了，空间浪费相当大，
+//        更糟的是这种情况中，数组可以使用的位置比数组长度小了很多，这意味着进一步增加了碰撞的几率，减慢了查询的效率！这样就会造成空间的浪费。
+
+        //hash 表存在， 长度 > 0 , 下标对应的第一个位置存在node 节点
+        if ((tab = table) != null && (n = tab.length) > 0 &&
+                (first = tab[(n - 1) & hash]) != null) {
 
 
+            //首位node hash值相同，key相同，
+                            //如果 key不相同，但是key 不为空 而且equals true 也认为是相同的
+                            //返回此node ，也就是说 first 节点就是我们要找的Node
 
+            if (first.hash == hash && // always check first node
+                    ((k = first.key) == key || (key != null && key.equals(k))))
+                return first;
+
+            //如果first 后继node 不为空，
+            // 1，判断一下 first node 是否位 TreeNode （还是 链表）
+                    //是 TreeNode ，继续查找对应的真是Node，如果找到了直接返回
+
+            //2，没找到，遍历链表，寻找正确的Node
+
+            //都没找到 返回 null
+
+            if ((e = first.next) != null) {
+
+                if (first instanceof TreeNode)
+                    return ((TreeNode<K,V>)first).getTreeNode(hash, key);
+
+                do {
+                    if (e.hash == hash &&
+                            ((k = e.key) == key || (key != null && key.equals(k))))
+                        return e;
+                } while ((e = e.next) != null);
+            }
+        }
+        return null;
+    }
 
 
 
